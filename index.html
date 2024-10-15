@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Innovation Management System</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #333; }
+        form { margin-bottom: 20px; }
+        textarea, button { margin: 10px 0; padding: 5px; width: 100%; }
+        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        #ideaList { border-top: 1px solid #ccc; padding-top: 20px; }
+        .idea { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .idea h3 { margin-top: 0; }
+        .idea p { margin-bottom: 5px; }
+        .comments { margin-left: 20px; }
+        .comment { background-color: #f9f9f9; padding: 5px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Innovation Management System</h1>
+
+    <h2>Submit a New Idea</h2>
+    <form id="submitForm">
+        <textarea id="ideaInput" placeholder="Enter your idea here" required></textarea>
+        <button type="submit">Submit Idea</button>
+    </form>
+
+    <h2>Existing Ideas</h2>
+    <div id="ideaList"></div>
+
+    <script>
+        const apiUrl = 'https://7d3aor5ra6.execute-api.us-east-1.amazonaws.com/Prod'; // This will be the base URL for our API endpoints
+
+        async function submitIdea(event) {
+            event.preventDefault();
+            const idea = document.getElementById('ideaInput').value;
+            try {
+                const response = await fetch(`${apiUrl}/ideas`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ idea: idea }),
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Idea submitted successfully!');
+                    document.getElementById('submitForm').reset();
+                    fetchIdeas();
+                } else {
+                    alert(`Failed to submit idea: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to submit idea. Please try again.');
+            }
+        }
+
+        async function fetchIdeas() {
+            try {
+                const response = await fetch(`${apiUrl}/ideas`);
+                const ideas = await response.json();
+                displayIdeas(ideas);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to fetch ideas. Please try again.');
+            }
+        }
+
+        function displayIdeas(ideas) {
+            const ideaList = document.getElementById('ideaList');
+            ideaList.innerHTML = '';
+            ideas.forEach(idea => {
+                const ideaElement = document.createElement('div');
+                ideaElement.className = 'idea';
+                ideaElement.innerHTML = `
+                    <h3>${idea.idea}</h3>
+                    <p>Votes: ${idea.votes}</p>
+                    <button onclick="voteIdea('${idea.id}')">Vote</button>
+                    <div class="comments">
+                        ${idea.comments.map(comment => `<div class="comment">${comment}</div>`).join('')}
+                    </div>
+                    <form onsubmit="commentIdea('${idea.id}', this); return false;">
+                        <input type="text" placeholder="Add a comment" required>
+                        <button type="submit">Comment</button>
+                    </form>
+                `;
+                ideaList.appendChild(ideaElement);
+            });
+        }
+
+        async function voteIdea(id) {
+            try {
+                const response = await fetch(`${apiUrl}/ideas/${id}/vote`, { method: 'POST' });
+                if (response.ok) {
+                    fetchIdeas();
+                } else {
+                    alert('Failed to vote. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to vote. Please try again.');
+            }
+        }
+
+        async function commentIdea(id, form) {
+            const comment = form.querySelector('input').value;
+            try {
+                const response = await fetch(`${apiUrl}/ideas/${id}/comment`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ comment: comment }),
+                });
+                if (response.ok) {
+                    form.reset();
+                    fetchIdeas();
+                } else {
+                    alert('Failed to add comment. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to add comment. Please try again.');
+            }
+        }
+
+        document.getElementById('submitForm').addEventListener('submit', submitIdea);
+        fetchIdeas(); // Fetch ideas when the page loads
+    </script>
+</body>
+</html>

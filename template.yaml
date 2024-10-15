@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Innovation Management System
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: python3.9
+
+Resources:
+  IdeasTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Ideas
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+
+  SubmitIdeaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: submit_idea.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IdeasTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: '*'
+      Events:
+        SubmitIdea:
+          Type: Api
+          Properties:
+            Path: /submit
+            Method: post
+
+  GetIdeasFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: get_ideas.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref IdeasTable
+      Events:
+        GetIdeas:
+          Type: Api
+          Properties:
+            Path: /ideas
+            Method: get
+
+  VoteIdeaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: vote_idea.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IdeasTable
+      Events:
+        VoteIdea:
+          Type: Api
+          Properties:
+            Path: /vote
+            Method: post
+
+  CommentIdeaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: comment_idea.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IdeasTable
+      Events:
+        CommentIdea:
+          Type: Api
+          Properties:
+            Path: /comment
+            Method: post
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
